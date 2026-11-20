@@ -189,8 +189,8 @@ PulsarClient 线程、线程组如下（图中实线表示客户端会从线程�
 ![PulsarClient 线程模型](images/pulsar-client/04-thread-model.png)
 
 - **pulsar-client-io**：IO 线程（Netty 内部线程），负责网络连接和读写。`numIoThreads` 参数配置，默认值为 1。客户端不直接绑定 IO 线程，而是由其内部的连接来绑定 IO 线程，所以 IO 线程数配置最好小于或者等于总连接数，否则有些线程不会使用到；
-- **pulsar-client-internal**：主要用于 Consumer 内部处理，比如接收到消息后放置到接收队列等。也是通过 `numIoThreads` 参数配置，默认值为 1；
-- **pulsar-external-listener**：主要用于 Consumer 外部处理，比如用户消费逻辑回调。`numListenerThreads` 参数配置，默认值为机器核心数（图中有误）；
+- **pulsar-client-internal**：主要用于 Consumer 内部处理，比如接收到消息后放置到接收队列等。也是通过 `numIoThreads` 参数配置，默认值为机器核心数；
+- **pulsar-external-listener**：主要用于 Consumer 外部处理，比如用户消费逻辑回调。`numListenerThreads` 参数配置，默认值为机器核心数；
 - **pulsar-timer**：时间轮内部线程，负责所有定时操作，比如连接重连、发送超时检测等。一个 PulsarClient 对应一个线程。
 
 简单描述一下生产消费时线程是如何交互的：

@@ -71,21 +71,21 @@ KRaft 大体上参考了 Raft 论文来实现，最大的不同点在于 Raft �
 
 KRaft 部分命名没有使用 Raft 命名，而是沿用了之前的 MQ 术语。下文中都会使用 KRaft 术语。术语如下：
 
-| 类型 | KRaft | Raft | 描述 |
-| --- | --- | --- | --- |
-| 角色 | voter | voter | 参与投票和消息提交的角色，包含 controller 角色的 Kafka 节点 |
-| 角色 | observer | non-voting | 不参与投票和消息提交角色，只能同步数据，只包含 Broker 角色的 Kafka 节点；相当于 Paxos 中的 learner |
-| 状态 | leader | leader | 有写权限 |
-| 状态 | follower | follower | 无写权限 |
-| 状态 | candidate | candidate | 可发起正式投票 |
-| 状态 | resigned | N/A | 刚退出 leader 状态（优雅停机） |
-| 状态 | unattached | N/A | 初始状态，不能做任何操作 |
-| 状态 | prospective | N/A | 可发起预投票 |
-| 参数 | epoch | term | 任期，每次选举 +1 |
-| 参数 | logStartOffset(LSO) | first index | 日志最开始位置 |
-| 参数 | logEndOffset(LEO) | lastLogIndex | 日志中最后位置，Kafka 中是最后位置 + 1 |
-| 参数 | highWatermark(HW) | commitIndex | 已提交的位置（可读的位置） |
-| 参数 | lastStableOffset | N/A | 事务状态下可读的位置，<= HW |
+| 类型 | KRaft               | Raft         | 描述                                                                                               |
+| ---- | ------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| 角色 | voter               | voter        | 参与投票和消息提交的角色，包含 controller 角色的 Kafka 节点                                        |
+| 角色 | observer            | non-voting   | 不参与投票和消息提交角色，只能同步数据，只包含 Broker 角色的 Kafka 节点；相当于 Paxos 中的 learner |
+| 状态 | leader              | leader       | 有写权限                                                                                           |
+| 状态 | follower            | follower     | 无写权限                                                                                           |
+| 状态 | candidate           | candidate    | 可发起正式投票                                                                                     |
+| 状态 | resigned            | N/A          | 刚退出 leader 状态（优雅停机）                                                                     |
+| 状态 | unattached          | N/A          | 初始状态，不能做任何操作                                                                           |
+| 状态 | prospective         | N/A          | 可发起预投票                                                                                       |
+| 参数 | epoch               | term         | 任期，每次选举 +1                                                                                  |
+| 参数 | logStartOffset(LSO) | first index  | 日志最开始位置                                                                                     |
+| 参数 | logEndOffset(LEO)   | lastLogIndex | 日志中最后位置，Kafka 中是最后位置 + 1                                                             |
+| 参数 | highWatermark(HW)   | commitIndex  | 已提交的位置（可读的位置）                                                                         |
+| 参数 | lastStableOffset    | N/A          | 事务状态下可读的位置，<= HW                                                                        |
 
 刚接触 Raft 可能会容易把 observer 角色和 leader、follower 状态混在一起看待，observer 只是不能参与投票和消息提交的静态角色，observer 在 KRaft 中也可以处于不同的状态（比如 unattached、follower 状态，由于不能选举，所以不会切换到其他状态）。
 
@@ -171,9 +171,9 @@ KRaft 实现上新增了 Prospective 状态，在这个状态的 Voter 会发起
 
 **写入 Leader**
 
-1. 客户端发送 CreateTopicsRequest 到任意节点的数据端口（默认 9092），该 Broker 转发请求到 ActiveController 的元数据端口（默认 9093）；
-2. ActiveController（Leader）接收到 CreateTopicsRequest，根据元数据规则拆解成多条元数据消息（TopicRecord、ConfigRecord、PartitionRecord 等）并直接应用到状态机（无需等到数据提交，下文会做解释）；
-3. 元数据消息写入并 flush 到 Leader log 里（假设数据一共有 10 条，LSO=0, LEO=9, HW=0）。
+- 1\. 客户端发送 CreateTopicsRequest 到任意节点的数据端口（默认 9092），该 Broker 转发请求到 ActiveController 的元数据端口（默认 9093）；
+- 2\. ActiveController（Leader）接收到 CreateTopicsRequest，根据元数据规则拆解成多条元数据消息（TopicRecord、ConfigRecord、PartitionRecord 等）并直接应用到状态机（无需等到数据提交，下文会做解释）；
+- 3\. 元数据消息写入并 flush 到 Leader log 里（假设数据一共有 10 条，LSO=0, LEO=9, HW=0）。
 
 **数据同步**
 
@@ -187,7 +187,7 @@ KRaft 实现上新增了 Prospective 状态，在这个状态的 Voter 会发起
 
 **数据返回**
 
-5. ActiveController 返回成功给客户端。
+- 5\. ActiveController 返回成功给客户端。
 
 熟悉 Kafka 的同学可以看出，元数据的写入和同步过程与 Kafka 原本的分区数据写入和同步基本一致，主要区别于元数据需要等大多数节点成功同步后才提交该条数据，而分区数据需要等 ISR 列表中的节点成功同步数据。
 
@@ -312,18 +312,18 @@ Raft 提出了 joint consensus 算法来解决脑裂问题，但是在工程实�
 
 ![新增 Voter 节点流程](images/kafka-kraft/09-add-voter.jpeg)
 
-1. 新节点配置并启动，可配置成 Controller 身份或者普通 Broker（Observer）身份，变更完会变成 Controller 身份。
+- 1\. 新节点配置并启动，可配置成 Controller 身份或者普通 Broker（Observer）身份，变更完会变成 Controller 身份。
 
-   新节点启动会尝试找到现任 Leader：
+  新节点启动会尝试找到现任 Leader：
 
-   - Controller 身份启动：等待后会尝试发起投票，由于它还不在其他 Controller 的 voters 列表中，肯定会失败，但是会从 VoteResponse 中获取到当前 Leader 信息；
-   - Broker 身份启动：会向任意已知的 Controller 节点发送 FetchRequest，如果对方不是 Leader，会在 FetchResponse 中返回 Leader 信息。
+  - Controller 身份启动：等待后会尝试发起投票，由于它还不在其他 Controller 的 voters 列表中，肯定会失败，但是会从 VoteResponse 中获取到当前 Leader 信息；
+  - Broker 身份启动：会向任意已知的 Controller 节点发送 FetchRequest，如果对方不是 Leader，会在 FetchResponse 中返回 Leader 信息。
 
-2. 获取到 Leader 信息后会不断与 Leader 交互来同步元数据。
+- 2\. 获取到 Leader 信息后会不断与 Leader 交互来同步元数据。
 
-   直接往 Raft 集群里加入慢节点是很危险的行为，因为数据需要新配置的大多数节点同步完才能提交，例如往 3 节点的 KRaft 中加入一个慢节点，KRaft 将无法写入数据，导致集群不可用。所以需要先同步数据，同步得差不多了再加入到集群中，也就是 Raft 中的 Observer 机制。基于 Pull 模型的 KRaft 天然就能很优雅地支持 Observer，无需对集群做任何操作，启动的新节点后默认就是 Observer，Leader 节点只需要被动响应即可。
+  直接往 Raft 集群里加入慢节点是很危险的行为，因为数据需要新配置的大多数节点同步完才能提交，例如往 3 节点的 KRaft 中加入一个慢节点，KRaft 将无法写入数据，导致集群不可用。所以需要先同步数据，同步得差不多了再加入到集群中，也就是 Raft 中的 Observer 机制。基于 Pull 模型的 KRaft 天然就能很优雅地支持 Observer，无需对集群做任何操作，启动的新节点后默认就是 Observer，Leader 节点只需要被动响应即可。
 
-3. 客户端发送 AddRaftVoterRequest 到 Leader 节点，发送到其他节点会转发。
+- 3\. 客户端发送 AddRaftVoterRequest 到 Leader 节点，发送到其他节点会转发。
 
 - 4.1 / 4.2 Leader 节点先发送 ApiVersionsRequest 命令到新节点获得新节点支持的版本列表；
 - 4.3 Leader 添加新节点到内存里，并把完整 voters 放在 VotersRecord 中写入到 log（此后 Leader 写入消息就需要新 voters 的大多数同步完才能提交）。
@@ -344,8 +344,8 @@ Raft 提出了 joint consensus 算法来解决脑裂问题，但是在工程实�
 
 ![删除 Voter 节点流程](images/kafka-kraft/10-remove-voter.jpeg)
 
-1. 客户端发送 RemoveRaftVoterRequest 到 Leader 节点，发送到其他节点会转发；
-2. Leader 删除对应节点后并把剩余 voters 放在 VotersRecord 中写入到 log（此后 Leader 写入消息就需要新 voters 的大多数同步完才能提交）；
+- 1\. 客户端发送 RemoveRaftVoterRequest 到 Leader 节点，发送到其他节点会转发；
+- 2\. Leader 删除对应节点后并把剩余 voters 放在 VotersRecord 中写入到 log（此后 Leader 写入消息就需要新 voters 的大多数同步完才能提交）；
 
 - 4.0 Follower 和 Observer 节点会同步这条 VotersRecord 并立刻应用（普通消息需等提交后才应用）；
 - 4.1 如果 Follower 发现被删除的恰好是自己，会切换到 Observer（还需保留 MQ 能力，所以不需要退出进程，Kafka 普通 Broker 就是 KRaft 中的 Observer）；
@@ -375,11 +375,12 @@ Raft 提出了 joint consensus 算法来解决脑裂问题，但是在工程实�
 
 在之前的 MQ 系列文章中，描述了运营 Kafka 在当时版本（2.4）遇到了很多的痛点。近两年 Kafka 发展迅速，支持了一些较大特性，有些当时面临的问题现在都已解决。已支持的重大特性列表如下，以供参考：
 
-| 问题 | 方案 |
-| --- | --- |
+| 问题                                                                 | 方案              |
+| -------------------------------------------------------------------- | ----------------- |
 | Topic 有上限、单分区容量限制、磁盘使用不均、存储压力、扩缩容数据迁移 | KIP-1150、KIP-500 |
-| 分区数限制消费者数量、仅支持流式消费 | KIP-932 |
-| rebalance 会阻塞，频繁 rebalance 难排查 | KIP-848 |
+| 分区数限制消费者数量、仅支持流式消费                                 | KIP-932           |
+| rebalance 会阻塞，频繁 rebalance 难排查                              | KIP-848           |
+
 ## 参考
 
 - In search of an understandable consensus algorithm
